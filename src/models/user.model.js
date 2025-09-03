@@ -2,8 +2,10 @@ import mongoose, {Schema} from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
-
-
+/**
+ * User Schema Definition
+ * Defines the structure and properties of the User document in MongoDB
+ */
 const userSchema = new Schema(
     {
         username: {
@@ -12,7 +14,7 @@ const userSchema = new Schema(
             unique: true,
             lowercase: true,
             trim: true,
-            index: true,
+            index: true,    // Indexing for faster queries
         },
         email: {
             type: String,
@@ -25,19 +27,19 @@ const userSchema = new Schema(
             type: String,
             required: true,
             trim: true,
-            index: true,
+            index: true,    // Indexing for faster queries
         },
         avatar: {
-            type: String, //cloudinary url
+            type: String,   // Stores cloudinary URL for user's avatar
             required: true,
         },
         coverImage: {
-            type: String, //cloudinary url
+            type: String,   // Stores cloudinary URL for user's cover image
         },
         watchHistory: [
             {
                 type: Schema.Types.ObjectId,
-                ref: "Video",
+                ref: "Video",    // References the Video model
             }
         ],
         password: {
@@ -45,39 +47,39 @@ const userSchema = new Schema(
             required: true,
         },
         refreshToken: {
-            type: String,
+            type: String,    // Stores JWT refresh token
         },
-
-
     },
     {
-        timestamps: true,    }
-)
-
-// Hash password before saving
-userSchema.pre("save", async function (next) {
-    if (!this.isModified("password")) {
-        this.password = await bcrypt.hash(this.password, 10);
-        next();
-
-    }  
-
+        timestamps: true,    // Automatically manage createdAt and updatedAt
     }
 )
 
+/**
+ * Pre-save middleware to hash password
+ * Runs before saving the document if password is modified
+ */
 userSchema.pre("save", async function (next) {
     if (!this.isModified("password")) {
-        this.password = await bcrypt.hash(this.password, 10);
-        next();
-
-    }  
+        return next();
+    }
+    this.password = await bcrypt.hash(this.password, 10);
+    next();
 })
 
+/**
+ * Method to verify if provided password matches the stored hash
+ * @param {string} password - The password to verify
+ * @returns {Promise<boolean>} - True if password matches, false otherwise
+ */
 userSchema.methods.isPasswordCorrect = async function (password) {
-     return await bcrypt.compare(password, this.password)
+    return await bcrypt.compare(password, this.password)
 }
 
-// Method to generate a acccess token for the user
+/**
+ * Generates JWT access token for authentication
+ * @returns {string} JWT access token
+ */
 userSchema.methods.generateAccessToken = function () {
     return jwt.sign(
         {
@@ -92,8 +94,11 @@ userSchema.methods.generateAccessToken = function () {
         }
     );
 };
-// Method to generate a refresh token for the user
 
+/**
+ * Generates JWT refresh token for maintaining session
+ * @returns {string} JWT refresh token
+ */
 userSchema.methods.generateRefreshToken = function () {
     return jwt.sign(
         {
@@ -106,51 +111,5 @@ userSchema.methods.generateRefreshToken = function () {
     );
 };
 
-
+// Create and export the User model
 export const User = mongoose.model("User", userSchema)
-// User model definition
-
-// Hash password before saving
-userSchema.pre("save", async function (next) {
-    if (!this.isModified("password")) {
-        this.password = await bcrypt.hash(this.password, 10);
-        next();
-
-    }  
-})
-
-// Method to check if the provided password is correct
-userSchema.methods.isPasswordCorrect = async function (password) {
-     return await bcrypt.compare(password, this.password)
-}
-
-// Method to generate an access token for the user
-userSchema.methods.generateAccessToken = function () {
-    return jwt.sign(
-        {
-            _id: this._id,
-            email: this.email,
-            username: this.username,
-            fullName: this.fullName,
-        },
-        process.env.ACCESS_TOKEN_SECRET,
-        {
-            expiresIn: process.env.ACCESS_TOKEN_EXPIRY,
-        }
-    );
-};
-
-// Method to generate a refresh token for the user
-userSchema.methods.generateRefreshToken = function () {
-    return jwt.sign(
-        {
-            _id: this._id,
-        },
-        process.env.REFRESH_TOKEN_SECRET,
-        {
-            expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
-        }
-    );
-};
-
-// Export the User model
